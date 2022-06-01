@@ -36,25 +36,30 @@ def mangaid_callback(_, query):
     manga = f"{mangaid}"
     y = n.manga_detail(manga)
     data = y['chapters']
-    m = []
-    for x in data:
-        m.append(f"{x['chapternumber']}")
+    m = [f"{x['chapternumber']}" for x in data]
     query.message.edit(f'Chapter Number - {m}\n /mangadownload {mangaid} chapterno', parse_mode='markdown')
 
 
 @bot.on_message(
     filters.command("mangasearch", prefixes=["/", ".", "?", "-"]))
 async def manga(client, message):
-        search = message.command[1]
-        limit = "12"
-        n = META()
-        mangasearch = f"{search}"
-        y = n.manga_search(mangasearch, limit)
-        keyb = []
-        for x in y:
-            keyb.append([InlineKeyboardButton(f"{x['title']}", callback_data=f"mangaid:mangaid:{x['mangaid']}")])
-        repl = InlineKeyboardMarkup(keyb)
-        await message.reply_text(f"Your Search Results for **{mangasearch}**", reply_markup=repl, parse_mode="markdown")
+    search = message.command[1]
+    limit = "12"
+    n = META()
+    mangasearch = f"{search}"
+    y = n.manga_search(mangasearch, limit)
+    keyb = [
+        [
+            InlineKeyboardButton(
+                f"{x['title']}",
+                callback_data=f"mangaid:mangaid:{x['mangaid']}",
+            )
+        ]
+        for x in y
+    ]
+
+    repl = InlineKeyboardMarkup(keyb)
+    await message.reply_text(f"Your Search Results for **{mangasearch}**", reply_markup=repl, parse_mode="markdown")
 
 
 
@@ -62,37 +67,35 @@ async def manga(client, message):
 @bot.on_message(
     filters.command("mangadownload", prefixes=["/", ".", "?", "-"]))
 async def manga(client, message):
-        manga = message.command[1]
-        chapter = message.command[2]
+    manga = message.command[1]
+    chapter = message.command[2]
 
-        n= META()
+    n= META()
 
-        mangaid = f"{manga}"
-   
-        chap = f"{chapter}"
+    mangaid = f"{manga}"
 
-        y = n.mangadl(mangaid, chap)
+    chap = f"{chapter}"
 
-        k = 1
-        os.mkdir(mangaid)
-        for x in y:
-            img = x['img']
-            src = requests.get(img).content
-            with open(f"{mangaid}/{k}.jpg" , "wb") as f:
-                f.write(src)
-            k += 1
-            filepaths = []
-            for root, directories, files in os.walk(f"{mangaid}"):
-               for name in files:
-                    mangafile = os.path.join(root, name)
-                    filepaths.append(mangafile)
+    y = n.mangadl(mangaid, chap)
 
-            filepaths.sort(key=lambda f: int(re.sub('\D', '', f)))
-            with open(f"{mangaid}-chapter-{chap}.pdf" ,"wb") as f:
-                 f.write(img2pdf.convert(filepaths))
-        await bot.send_document(message.chat.id , f"{mangaid}-chapter-{chap}.pdf")
-        os.remove(f"{mangaid}-chapter-{chap}.pdf")
-        os.system(f"rm -rf {mangaid}")
+    os.mkdir(mangaid)
+    for k, x in enumerate(y, start=1):
+        img = x['img']
+        src = requests.get(img).content
+        with open(f"{mangaid}/{k}.jpg" , "wb") as f:
+            f.write(src)
+        filepaths = []
+        for root, directories, files in os.walk(f"{mangaid}"):
+           for name in files:
+                mangafile = os.path.join(root, name)
+                filepaths.append(mangafile)
+
+        filepaths.sort(key=lambda f: int(re.sub('\D', '', f)))
+        with open(f"{mangaid}-chapter-{chap}.pdf" ,"wb") as f:
+             f.write(img2pdf.convert(filepaths))
+    await bot.send_document(message.chat.id , f"{mangaid}-chapter-{chap}.pdf")
+    os.remove(f"{mangaid}-chapter-{chap}.pdf")
+    os.system(f"rm -rf {mangaid}")
 
 
 bot.run()
